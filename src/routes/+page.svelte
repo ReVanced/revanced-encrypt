@@ -10,6 +10,8 @@
 	let keyUrl = GPG_KEY_URL;
 	let keyError = '';
 	let disabled = true;
+	let inputText = '';
+	let copyButtonText = 'Encrypt';
 
 	onMount(() => {
 		getKeyFromUrl();
@@ -66,6 +68,27 @@
 		}
 	}
 
+	async function encryptText() {
+		if (disabled || !key || !inputText.trim()) return;
+
+		const msg = await createMessage({ text: inputText });
+		const enc = await encrypt({ message: msg, encryptionKeys: key, format: 'armored' });
+		const encryptedText = enc as string;
+
+		try {
+			await navigator.clipboard.writeText(encryptedText);
+			copyButtonText = 'Copied!';
+			setTimeout(() => {
+				copyButtonText = 'Encrypt';
+			}, 2000);
+		} catch (e) {
+			copyButtonText = 'Failed';
+			setTimeout(() => {
+				copyButtonText = 'Encrypt';
+			}, 2000);
+		}
+	}
+
 	function handleDrop(event: DragEvent) {
 		event.preventDefault();
 		if (disabled) return;
@@ -108,6 +131,11 @@
 		<p>Drag files here or click to select</p>
 		<input bind:this={fileInput} type="file" hidden multiple onchange={handleChange} {disabled} />
 	</main>
+
+	<div class="text-encrypt-section">
+		<textarea bind:value={inputText} placeholder="Enter text to encrypt..." {disabled}></textarea>
+		<button onclick={encryptText} disabled={disabled || !inputText.trim()}>{copyButtonText}</button>
+	</div>
 
 	<div class="key-section">
 		{#if keyError}
@@ -195,6 +223,57 @@
 		text-align: center;
 	}
 
+	.text-encrypt-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.text-encrypt-section textarea {
+		width: 100%;
+		height: 100px;
+		padding: 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid rgb(172, 193, 210);
+		background-color: rgb(30, 31, 36);
+		color: rgb(172, 193, 210);
+		font-family: monospace;
+		font-size: 0.875rem;
+		resize: vertical;
+		box-sizing: border-box;
+
+		&:focus {
+			outline: none;
+			border-color: rgb(100, 150, 200);
+		}
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+	}
+
+	.text-encrypt-section button {
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid rgb(172, 193, 210);
+		background-color: rgb(50, 51, 56);
+		color: rgb(172, 193, 210);
+		cursor: pointer;
+		font-size: 0.875rem;
+		white-space: nowrap;
+		align-self: flex-start;
+
+		&:hover:not(:disabled) {
+			background-color: rgb(60, 61, 66);
+		}
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+	}
+
 	.key-section {
 		display: flex;
 		flex-direction: column;
@@ -225,26 +304,6 @@
 		&:focus {
 			outline: none;
 			border-color: rgb(100, 150, 200);
-		}
-	}
-
-	.key-url-row button {
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid rgb(172, 193, 210);
-		background-color: rgb(50, 51, 56);
-		color: rgb(172, 193, 210);
-		cursor: pointer;
-		font-size: 0.875rem;
-		white-space: nowrap;
-
-		&:hover:not(:disabled) {
-			background-color: rgb(60, 61, 66);
-		}
-
-		&:disabled {
-			opacity: 0.5;
-			cursor: not-allowed;
 		}
 	}
 
